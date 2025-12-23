@@ -116,21 +116,45 @@ class ConfigMixin:
     def check_config_keys(self, config: dict[str, Any] | None = None) -> dict[str, bool]:
         """Check if all required configuration keys are present.
 
+        A key is considered present if:
+        - It's in the config dict, OR
+        - It has a default value in config_defaults, OR
+        - It can be retrieved from environment variables
+
         Args:
             config: Optional config dict to check. If None, uses current config.
 
         Returns:
             Dictionary mapping config keys to their presence status.
         """
+        config_defaults = getattr(self, "config_defaults", {})
+        
         if config is not None:
-            return {key: key in config for key in self.config_keys}
+            status: dict[str, bool] = {}
+            for key in self.config_keys:
+                present = key in config
+                if not present:
+                    present = key in config_defaults
+                if not present:
+                    value = self._get_config_or_env(key)
+                    present = value is not None
+                status[key] = present
+            return status
 
         if hasattr(self, "_config_keys_cache"):
             cache: dict[str, bool] = getattr(self, "_config_keys_cache", {})
             return cache
 
         config_to_check = getattr(self, "_config", {})
-        status: dict[str, bool] = {key: key in config_to_check for key in self.config_keys}
+        status: dict[str, bool] = {}
+        for key in self.config_keys:
+            present = key in config_to_check
+            if not present:
+                present = key in config_defaults
+            if not present:
+                value = self._get_config_or_env(key)
+                present = value is not None
+            status[key] = present
         self._config_keys_cache = status
         return status
 

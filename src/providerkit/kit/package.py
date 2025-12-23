@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
+import sys
+from types import ModuleType
 
 
 class PackageMixin:
@@ -83,4 +86,69 @@ class PackageMixin:
         """
         status = self.check_packages()
         return [pkg for pkg, installed in status.items() if not installed]
+
+    @classmethod
+    def safe_import_packages(cls, packages: list[str], globals_dict: dict[str, Any] | None = None) -> None:
+        """Import packages safely at module level.
+
+        This class method can be called at module level to import packages
+        before the class is instantiated.
+
+        Args:
+            packages: List of package names to import.
+            globals_dict: Dictionary (typically from globals()) to make
+                imported modules available in the calling namespace.
+        """
+        for package_name in packages:
+            normalized_name = package_name.replace("-", "_").replace(".", "_")
+
+            try:
+                module = importlib.import_module(normalized_name)
+                sys.modules[package_name] = module
+                if globals_dict is not None:
+                    globals_dict[package_name] = module
+                    globals_dict[normalized_name] = module
+            except (ImportError, ModuleNotFoundError):
+                try:
+                    module = importlib.import_module(package_name)
+                    sys.modules[normalized_name] = module
+                    if globals_dict is not None:
+                        globals_dict[package_name] = module
+                        globals_dict[normalized_name] = module
+                except (ImportError, ModuleNotFoundError):
+                    continue
+
+    def safe_import(self, globals_dict: dict[str, Any] | None = None) -> None:
+        """Import required packages safely, skipping those that are not installed.
+
+        This method loops through required_packages and imports only those that are
+        available. Packages that are not installed are skipped and not imported.
+        This is useful for provider discovery when packages may not be installed.
+
+        The imported modules are registered in sys.modules and can be used
+        throughout the code after calling this method.
+
+        Args:
+            globals_dict: Optional dictionary (typically from globals()) to make
+                imported modules available in the calling namespace.
+        """
+        packages = self.get_required_packages()
+        for package_name in packages:
+            normalized_name = package_name.replace("-", "_").replace(".", "_")
+
+            try:
+                module = importlib.import_module(normalized_name)
+                sys.modules[package_name] = module
+                if globals_dict is not None:
+                    globals_dict[package_name] = module
+                    globals_dict[normalized_name] = module
+            except (ImportError, ModuleNotFoundError):
+                try:
+                    module = importlib.import_module(package_name)
+                    sys.modules[normalized_name] = module
+                    if globals_dict is not None:
+                        globals_dict[package_name] = module
+                        globals_dict[normalized_name] = module
+                except (ImportError, ModuleNotFoundError):
+                    continue
 

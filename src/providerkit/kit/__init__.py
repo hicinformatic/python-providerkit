@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import sys
+from types import ModuleType
+
 from .config import ConfigMixin
 from .package import PackageMixin
 from .service import ServiceMixin
@@ -16,6 +19,14 @@ class ProviderBase(PackageMixin, UrlsMixin, ConfigMixin, ServiceMixin):
     description: str | None
     mandatory_base_fields: list[str] = ["name", "display_name"]
     path: str | None = None
+
+    def __init_subclass__(cls, **kwargs):
+        """Automatically import required packages when subclass is defined."""
+        super().__init_subclass__(**kwargs)
+        if hasattr(cls, "required_packages") and cls.required_packages:
+            frame = sys._getframe(1)
+            module_globals = frame.f_globals
+            PackageMixin.safe_import_packages(cls.required_packages, module_globals)
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize a provider with required identification.

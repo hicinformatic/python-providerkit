@@ -455,6 +455,9 @@ def _format_results_json(results: dict[str, Any]) -> str:
         if "result" in result_data:
             item["status"] = "success"
             item["result"] = result_data["result"]
+        elif "errors" in result_data:
+            item["status"] = "error"
+            item["errors"] = result_data["errors"]
         elif "error" in result_data:
             item["status"] = "error"
             item["error"] = result_data["error"]
@@ -670,6 +673,8 @@ def get_providers(
     else:
         providers_dir = _find_package_providers_dir(lib_name)
         if providers_dir:
+            if base_module is None:
+                base_module = f"{lib_name}.providers"
             providers = _load_providers_from_dir(providers_dir, base_module, **additional_args)
         else:
             providers = {}
@@ -737,6 +742,33 @@ def try_providers(  # noqa: C901
     results: dict[str, Any] = {}
     providers_without_method: list[str] = []
     for provider_name, provider in providers.items():
+        errors: list[str] = []
+        
+        if not provider.are_packages_installed():
+            missing_packages = provider.get_missing_packages()
+            if missing_packages:
+                errors.append(f"Packages missing: {', '.join(missing_packages)}")
+            else:
+                errors.append("package_missing")
+        
+        if not provider.is_config_ready():
+            missing_config = provider.get_missing_config_keys()
+            if missing_config:
+                errors.append(f"Config missing: {', '.join(missing_config)}")
+            else:
+                errors.append("config_missing")
+        
+        if not provider.are_services_implemented():
+            missing_services = provider.get_missing_services()
+            if missing_services:
+                errors.append(f"Service missing: {', '.join(missing_services)}")
+            else:
+                errors.append("service_missing")
+        
+        if errors:
+            results[provider_name] = {"errors": errors, "provider": provider.display_name}
+            continue
+        
         try:
             method = getattr(provider, command, None)
             if method is None or not callable(method):
@@ -810,6 +842,33 @@ def try_providers_first(  # noqa: C901
     results: dict[str, Any] = {}
     providers_without_method: list[str] = []
     for provider_name, provider in providers.items():
+        errors: list[str] = []
+        
+        if not provider.are_packages_installed():
+            missing_packages = provider.get_missing_packages()
+            if missing_packages:
+                errors.append(f"Packages missing: {', '.join(missing_packages)}")
+            else:
+                errors.append("package_missing")
+        
+        if not provider.is_config_ready():
+            missing_config = provider.get_missing_config_keys()
+            if missing_config:
+                errors.append(f"Config missing: {', '.join(missing_config)}")
+            else:
+                errors.append("config_missing")
+        
+        if not provider.are_services_implemented():
+            missing_services = provider.get_missing_services()
+            if missing_services:
+                errors.append(f"Service missing: {', '.join(missing_services)}")
+            else:
+                errors.append("service_missing")
+        
+        if errors:
+            results[provider_name] = {"errors": errors, "provider": provider.display_name}
+            continue
+        
         try:
             method = getattr(provider, command, None)
             if method is None or not callable(method):
