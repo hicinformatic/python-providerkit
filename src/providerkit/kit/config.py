@@ -27,7 +27,8 @@ class ConfigMixin:
         if not hasattr(self, "_config"):
             self._config: dict[str, Any] = {}
         if config is not None:
-            self._config = self._filter_config(config)
+            filtered = self._filter_config(config)
+            self._config = filtered
             self.clear_config_cache()
 
     def _filter_config(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -49,7 +50,9 @@ class ConfigMixin:
         Priority order:
         1. Config dict (highest priority)
         2. Environment variable with prefix format: {PREFIX}_{PROVIDER_NAME}_{KEY}
-        3. Default parameter (lowest priority)
+        3. Environment variable without prefix: {PROVIDER_NAME}_{KEY}
+        4. Environment variable without prefix: {KEY}
+        5. Default parameter (lowest priority)
 
         Args:
             key: Configuration key name.
@@ -63,12 +66,25 @@ class ConfigMixin:
         if value is not None:
             return value
 
-        if not self.config_prefix:
-            return default
-
         provider_name = getattr(self, "name", "").upper().replace("-", "_")
-        env_key = f"{self.config_prefix}_{provider_name}_{key.upper()}"
-        return os.getenv(env_key, default)
+        key_upper = key.upper()
+
+        if self.config_prefix:
+            env_key_with_prefix = f"{self.config_prefix}_{provider_name}_{key_upper}"
+            value = os.getenv(env_key_with_prefix)
+            if value is not None:
+                return value
+
+        env_key_provider = f"{provider_name}_{key_upper}"
+        value = os.getenv(env_key_provider)
+        if value is not None:
+            return value
+
+        value = os.getenv(key_upper)
+        if value is not None:
+            return value
+
+        return default
 
     def configure(self, config: dict[str, Any], *, replace: bool = False) -> Any:
         """Update provider configuration.
@@ -81,11 +97,12 @@ class ConfigMixin:
             Self for method chaining.
         """
         if not hasattr(self, "_config"):
-            self._config: dict[str, Any] = {}
+            self._config = {}
+        filtered = self._filter_config(config)
         if replace:
-            self._config = self._filter_config(config)
+            self._config = filtered
         else:
-            self._config.update(self._filter_config(config))
+            self._config.update(filtered)
         self.clear_config_cache()
         return self
 
@@ -93,7 +110,7 @@ class ConfigMixin:
     def config(self) -> dict[str, Any]:
         """Access configuration values."""
         if not hasattr(self, "_config"):
-            self._config: dict[str, Any] = {}
+            self._config = {}
         return self._config
 
     def check_config_keys(self, config: dict[str, Any] | None = None) -> dict[str, bool]:
@@ -109,10 +126,11 @@ class ConfigMixin:
             return {key: key in config for key in self.config_keys}
 
         if hasattr(self, "_config_keys_cache"):
-            return self._config_keys_cache
+            cache: dict[str, bool] = getattr(self, "_config_keys_cache", {})
+            return cache
 
         config_to_check = getattr(self, "_config", {})
-        status = {key: key in config_to_check for key in self.config_keys}
+        status: dict[str, bool] = {key: key in config_to_check for key in self.config_keys}
         self._config_keys_cache = status
         return status
 

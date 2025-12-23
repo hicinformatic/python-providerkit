@@ -50,10 +50,11 @@ class PackageMixin:
             Dictionary mapping package names to their installation status.
         """
         if hasattr(self, "_packages_cache"):
-            return self._packages_cache
+            cache: dict[str, bool] = getattr(self, "_packages_cache", {})
+            return cache
 
         packages = self.get_required_packages()
-        status = {pkg: self.is_package_installed(pkg) for pkg in packages}
+        status: dict[str, bool] = {pkg: self.is_package_installed(pkg) for pkg in packages}
         self._packages_cache = status
         return status
 

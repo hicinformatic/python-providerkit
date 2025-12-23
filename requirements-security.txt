@@ -1,8 +1,0 @@
-# Security dependencies
-# Install with: pip install -r requirements-security.txt
-
-bandit>=1.7.0
-safety>=3.0.0
-pip-audit>=2.7.0
-semgrep>=1.0.0
-

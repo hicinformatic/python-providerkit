@@ -1,0 +1,51 @@
+[
+  {
+    "class": "tests.test_providers_alphabet.asia.china.ChinaAlphabetProvider",
+    "config": {
+      "CHINA_API_KEY": "",
+      "CHINA_API_SECRET": "",
+      "CHINA_ENCODING": "UTF-8"
+    }
+  },
+  {
+    "class": "tests.test_providers_alphabet.asia.japan.JapanAlphabetProvider",
+    "config": {
+      "JAPAN_API_KEY": "",
+      "JAPAN_API_TOKEN": "",
+      "JAPAN_CHARSET": "UTF-8"
+    }
+  },
+  {
+    "class": "tests.test_providers_alphabet.europe.france.FranceAlphabetProvider",
+    "config": {
+      "FRANCE_API_KEY": "",
+      "FRANCE_LOCALE": "fr_FR",
+      "FRANCE_DIACRITICS": "true"
+    }
+  },
+  {
+    "class": "tests.test_providers_alphabet.europe.spain.SpainAlphabetProvider",
+    "config": {
+      "SPAIN_API_KEY": "",
+      "SPAIN_REGION": "es",
+      "SPAIN_ENCODING": "UTF-8"
+    }
+  },
+  {
+    "class": "tests.test_providers_alphabet.africa.arabic.ArabicAlphabetProvider",
+    "config": {
+      "ARABIC_API_KEY": "",
+      "ARABIC_DIRECTION": "rtl",
+      "ARABIC_SCRIPT": "arabic"
+    }
+  },
+  {
+    "class": "tests.test_providers_alphabet.africa.swahili.SwahiliAlphabetProvider",
+    "config": {
+      "SWAHILI_API_KEY": "",
+      "SWAHILI_COUNTRY": "tanzania",
+      "SWAHILI_DIALECT": "standard"
+    }
+  }
+]
+

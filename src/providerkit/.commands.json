@@ -1,0 +1,5 @@
+{
+    "packages": ["qualitybase"],
+    "directories": ["commands"],
+    "commands": []
+}

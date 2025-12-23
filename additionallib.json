@@ -1,0 +1,10 @@
+{
+  "libraries": [
+    {
+      "name": "python-qualitybase",
+      "path": "../python-qualitybase",
+      "description": "Quality base library"
+    }
+  ]
+}
+

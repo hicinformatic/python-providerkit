@@ -41,10 +41,11 @@ class ServiceMixin:
             Dictionary mapping service names to their implementation status.
         """
         if hasattr(self, "_services_cache"):
-            return self._services_cache
+            cache: dict[str, bool] = getattr(self, "_services_cache", {})
+            return cache
 
         services = self.get_required_services()
-        status = {service: self.is_service_implemented(service) for service in services}
+        status: dict[str, bool] = {service: self.is_service_implemented(service) for service in services}
         self._services_cache = status
         return status
 

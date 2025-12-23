@@ -1,77 +1,77 @@
 #!/usr/bin/env python3
 """Service router script for Python projects.
 
-Routes commands to appropriate service scripts in .services/ directory.
+Routes commands to appropriate service scripts from qualitybase or local services.
 Usage:
     ./service.py quality lint
     ./service.py dev install-dev
+    ENSURE_VIRTUALENV=1 ./service.py dev help
 """
 
 from __future__ import annotations
 
+import os
+import platform
+import site
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-SERVICES_DIR = PROJECT_ROOT / ".services"
+
+
+def _activate_venv_if_requested() -> None:
+    """Activate virtual environment if ENSURE_VIRTUALENV=1 is set."""
+    if os.environ.get("ENSURE_VIRTUALENV") != "1":
+        return
+    
+    venv_dir = PROJECT_ROOT / ".venv"
+    if not venv_dir.exists():
+        return
+    
+    venv_bin = venv_dir / ("Scripts" if platform.system() == "Windows" else "bin")
+    venv_python = venv_bin / ("python.exe" if platform.system() == "Windows" else "python")
+    
+    if venv_python.exists():
+        sys.executable = str(venv_python)
+        path_sep = ";" if platform.system() == "Windows" else ":"
+        current_path = os.environ.get("PATH", "")
+        venv_bin_str = str(venv_bin)
+        if venv_bin_str not in current_path:
+            os.environ["PATH"] = f"{venv_bin_str}{path_sep}{current_path}"
+        
+        if platform.system() == "Windows":
+            site_packages = venv_dir / "Lib" / "site-packages"
+            if site_packages.exists():
+                site.addsitedir(str(site_packages))
+        else:
+            python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+            for lib_dir in ["lib", "lib64"]:
+                site_packages = venv_dir / lib_dir / f"python{python_version}" / "site-packages"
+                if site_packages.exists():
+                    site.addsitedir(str(site_packages))
 
 
 def main() -> int:
     """Main entry point."""
-    if len(sys.argv) < 3:
-        print("Usage: ./service.py <service> <command> [args...]")
-        print("\nServices:")
-        print("  quality  Quality checks (lint, security, test, complexity, cleanup)")
-        print("  dev      Development tasks (venv, install, install-dev, clean, build)")
-        print("  django   Django management commands (runserver, makemigrations, migrate, etc.)")
-        print("  publish  Publishing (releases, social media announcements)")
-        print("\nExamples:")
-        print("  ./service.py quality lint")
-        print("  ./service.py quality security")
-        print("  ./service.py dev install-dev")
-        print("  ./service.py dev venv")
-        print("  ./service.py django runserver")
-        print("  ./service.py django makemigrations")
-        print("  ./service.py publish release-full")
-        print("  ./service.py publish social-all")
-        return 1
-
-    service = sys.argv[1].lower()
-    command_args = sys.argv[2:]
-
-    # Map service names to script files
-    service_scripts = {
-        "quality": SERVICES_DIR / "quality.py",
-        "dev": SERVICES_DIR / "dev.py",
-        "django": SERVICES_DIR / "django.py",
-        "publish": SERVICES_DIR / "publish.py",
-    }
-
-    if service not in service_scripts:
-        print(f"Error: Unknown service '{service}'")
-        print("Available services: quality, dev, django, publish")
-        return 1
-
-    script_path = service_scripts[service]
-
-    if not script_path.exists():
-        print(f"Error: Service script not found: {script_path}")
-        return 1
-
-    # Execute the service script with remaining arguments
-    import subprocess
+    # Activate venv if ENSURE_VIRTUALENV=1 is set
+    _activate_venv_if_requested()
+    
     try:
-        result = subprocess.run(
-            [sys.executable, str(script_path)] + command_args,
-            cwd=PROJECT_ROOT,
-        )
-        return result.returncode
-    except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
-        return 130
-    except Exception as exc:
-        print(f"Error executing service: {exc}")
+        from qualitybase.services.service import main as service_main
+    except ImportError as e:
+        print("Error: qualitybase not found. Either install qualitybase as a dependency or ensure it's available in the development environment.")
+        print(f"\nDetails: {e}")
+        print("\nTo fix this, install dependencies from requirements.txt:")
+        requirements = PROJECT_ROOT / "requirements.txt"
+        if requirements.exists():
+            print(f"     pip install -r {requirements}")
+        else:
+            print("     pip install -r requirements.txt")
+        print("\nOr if you have additionallib.json, install qualitybase manually:")
+        print("     pip install -e ../python-qualitybase")
         return 1
+    
+    return service_main(PROJECT_ROOT, usage_prefix="./service.py")
 
 
 if __name__ == "__main__":

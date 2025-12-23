@@ -1,2 +1,0 @@
-"""Quality check modules."""
-

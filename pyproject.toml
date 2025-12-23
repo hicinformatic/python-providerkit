@@ -3,43 +3,43 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "python-quality-template"
+name = "providerkit"
 version = "0.1.0"
-description = "Python library template with quality tools"
+description = "ProviderKit - Generic provider management library"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
   {name = "Your Name", email = "your.email@example.com"}
 ]
-dependencies = []
+dependencies = [
+  "qualitybase",
+]
+
+[project.scripts]
+providerkit = "providerkit.cli:main"
 
 [project.optional-dependencies]
+dev = [
+  # For local development, install qualitybase in editable mode:
+  # pip install -e ../python-qualitybase
+  # Or use: pip install -r requirements.txt
+]
 lint = [
-  "ruff>=0.5.0",
-  "mypy>=1.0.0",
-  "semgrep>=1.0.0",
-  "pylint>=3.0.0",
+  "qualitybase[lint]",
 ]
 quality = [
-  "radon>=6.0.0",
-  "vulture>=2.0.0",
-  "autoflake>=2.0.0",
+  "qualitybase[quality]",
 ]
 security = [
-  "bandit>=1.7.0",
-  "safety>=3.0.0",
-  "pip-audit>=2.7.0",
-  "semgrep>=1.0.0",
+  "qualitybase[security]",
 ]
 test = [
-  "pytest>=8.3.0",
-  "pytest-cov>=4.1.0",
-  "pytest-xdist>=3.5.0",
+  "qualitybase[test]",
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 exclude = ["tests*", "docs*"]
 
 [tool.pytest.ini_options]

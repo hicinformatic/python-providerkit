@@ -2,11 +2,15 @@
 
 __version__ = "0.1.0"
 
+from .cli import main
 from .helpers import (
     autodiscover_providers,
     get_providers,
+    helper,
     load_providers_from_config,
     load_providers_from_json,
+    try_providers,
+    try_providers_first,
 )
 from .kit import ProviderBase
 from .kit.config import ConfigMixin
@@ -22,4 +26,8 @@ __all__ = [
     "load_providers_from_json",
     "load_providers_from_config",
     "autodiscover_providers",
+    "try_providers",
+    "try_providers_first",
+    "helper",
+    "main",
 ]
