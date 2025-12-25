@@ -6,6 +6,7 @@ import importlib
 import importlib.util
 import inspect
 import json
+import sys
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from pathlib import Path
@@ -202,6 +203,14 @@ def autodiscover_providers(
 
     providers: dict[str, type[ProviderBase]] = {}
 
+    if base_module is None:
+        inferred_base = _infer_base_module(dir_path_obj)
+        if inferred_base:
+            base_module = inferred_base
+            cwd = Path.cwd()
+            if str(cwd) not in sys.path:
+                sys.path.insert(0, str(cwd))
+
     for py_file in dir_path_obj.rglob("*.py"):
         if py_file.name in exclude_files or py_file.name.startswith("_"):
             continue
@@ -209,13 +218,15 @@ def autodiscover_providers(
         try:
             if base_module:
                 module_path = _build_module_path(py_file, dir_path_obj, base_module)
+                module = importlib.import_module(module_path)
             else:
-                module_path_result = _get_module_path_from_file(py_file)
-                if module_path_result is None:
+                spec = importlib.util.spec_from_file_location(py_file.stem, py_file)
+                if spec is None or spec.loader is None:
                     continue
-                module_path = module_path_result
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                module_path = module.__name__
 
-            module = importlib.import_module(module_path)
             found_providers = _extract_providers_from_module(module, module_path)
             providers.update(found_providers)
         except (ImportError, AttributeError, TypeError, ValueError):
@@ -561,7 +572,8 @@ def _load_providers_from_dir(
 
     Args:
         dir_path: Directory path to scan.
-        base_module: Base module name. If None, inferred from path.
+        base_module: Base module name. If None, autodiscover_providers will use
+            _get_module_path_from_file() to load files directly.
 
     Returns:
         Dictionary of provider instances.
@@ -571,9 +583,6 @@ def _load_providers_from_dir(
         raise FileNotFoundError(f"Directory not found: {dir_path}")
     if not dir_path_obj.is_dir():
         raise NotADirectoryError(f"Path is not a directory: {dir_path}")
-
-    if base_module is None:
-        base_module = _infer_base_module(dir_path_obj)
 
     provider_classes = autodiscover_providers(dir_path, base_module=base_module)
     providers: dict[str, ProviderBase] = {}
@@ -635,9 +644,18 @@ def _filter_providers_by_attributes(
             if attr_value is None:
                 matches = False
                 break
-            if search_value.lower() not in str(attr_value).lower():
-                matches = False
-                break
+            if callable(attr_value):
+                attr_value = attr_value()
+            search_lower = search_value.lower()
+            if isinstance(attr_value, bool):
+                search_bool = search_lower in ("true", "1", "yes", "on")
+                if attr_value != search_bool:
+                    matches = False
+                    break
+            else:
+                if search_lower not in str(attr_value).lower():
+                    matches = False
+                    break
         if matches:
             filtered[name] = provider
 

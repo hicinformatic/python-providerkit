@@ -190,3 +190,11 @@ class ConfigMixin:
         status = self.check_config_keys(config)
         return [key for key, present in status.items() if not present]
 
+    @property
+    def missing_config_keys(self) -> list[str]:
+        """Get list of required configuration keys that are missing.
+
+        Returns:
+            List of missing configuration keys.
+        """
+        return self.get_missing_config_keys()

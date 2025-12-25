@@ -6,8 +6,8 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 from qualitybase.commands.base import Command
+from qualitybase.cli import _get_package_name  # noqa: TID252
 
-from ..cli import _get_package_name  # noqa: TID252
 from ..helpers import get_providers, try_providers, try_providers_first  # noqa: TID252
 
 if TYPE_CHECKING:

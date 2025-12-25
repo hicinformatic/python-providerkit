@@ -75,3 +75,12 @@ class ServiceMixin:
         status = self.check_services()
         return [service for service, implemented in status.items() if not implemented]
 
+    @property
+    def missing_services(self) -> list[str]:
+        """Get list of required services that are not implemented.
+
+        Returns:
+            List of service names that are required but not implemented.
+        """
+        return self.get_missing_services()
+

@@ -87,6 +87,15 @@ class PackageMixin:
         status = self.check_packages()
         return [pkg for pkg, installed in status.items() if not installed]
 
+    @property
+    def missing_packages(self) -> list[str]:
+        """Get list of required packages that are not installed.
+
+        Returns:
+            List of package names that are required but not installed.
+        """
+        return self.get_missing_packages()
+
     @classmethod
     def safe_import_packages(cls, packages: list[str], globals_dict: dict[str, Any] | None = None) -> None:
         """Import packages safely at module level.
