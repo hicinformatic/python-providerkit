@@ -6,12 +6,13 @@ import sys
 from types import ModuleType
 
 from .config import ConfigMixin
+from .cost import CostMixin
 from .package import PackageMixin
 from .service import ServiceMixin
 from .urls import UrlsMixin
 
 
-class ProviderBase(PackageMixin, UrlsMixin, ConfigMixin, ServiceMixin):
+class ProviderBase(PackageMixin, UrlsMixin, ConfigMixin, ServiceMixin, CostMixin):
     """Base class for providers with basic identification information."""
 
     name: str
@@ -19,6 +20,7 @@ class ProviderBase(PackageMixin, UrlsMixin, ConfigMixin, ServiceMixin):
     description: str | None
     mandatory_base_fields: list[str] = ["name", "display_name"]
     path: str | None = None
+    provider_can_be_used: bool = True
 
     def __init_subclass__(cls, **kwargs):
         """Automatically import required packages when subclass is defined."""

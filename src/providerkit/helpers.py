@@ -270,6 +270,32 @@ def filter_providers(
     return filtered
 
 
+def _format_services_status(provider: ProviderBase) -> str:
+    """Format services status as X/Y format.
+    
+    Args:
+        provider: Provider instance to check.
+        
+    Returns:
+        Formatted string like "2/3" or "✓" if all implemented.
+    """
+    if not hasattr(provider, "get_required_services") or not hasattr(provider, "is_service_implemented"):
+        if hasattr(provider, "are_services_implemented") and provider.are_services_implemented():
+            return "✓"
+        return "✗"
+    
+    services = provider.get_required_services()
+    if not services:
+        return "N/A"
+    
+    implemented_count = sum(1 for service in services if provider.is_service_implemented(service))
+    total_count = len(services)
+    
+    if implemented_count == total_count:
+        return "✓"
+    return f"{implemented_count}/{total_count}"
+
+
 def _format_table(providers: dict[str, ProviderBase]) -> str:
     """Format providers as a table."""
     columns = [
@@ -296,8 +322,8 @@ def _format_table(providers: dict[str, ProviderBase]) -> str:
         },
         {
             "header": "Service",
-            "width": 8,
-            "formatter": lambda item, _key: "✓" if hasattr(item, "are_services_implemented") and item.are_services_implemented() else "✗",
+            "width": 10,
+            "formatter": lambda item, _key: _format_services_status(item),
         },
     ]
 
@@ -336,8 +362,12 @@ def _format_json(providers: dict[str, ProviderBase]) -> str:
             provider_data["packages_missing"] = provider.get_missing_packages()
 
         if hasattr(provider, "are_services_implemented"):
-            provider_data["services_implemented"] = provider.are_services_implemented()
             services_status = provider.check_services()
+            services = provider.get_required_services()
+            implemented_count = sum(1 for service in services if provider.is_service_implemented(service)) if services else 0
+            total_count = len(services) if services else 0
+            provider_data["services_implemented"] = provider.are_services_implemented()
+            provider_data["services_implemented_count"] = f"{implemented_count}/{total_count}"
             provider_data["services_implemented_list"] = [service for service, implemented in services_status.items() if implemented]
             provider_data["services_missing"] = provider.get_missing_services()
 
@@ -377,8 +407,12 @@ def _add_xml_services_info(provider_elem: ET.Element, provider: ProviderBase) ->
     """Add services information to XML provider element."""
     if not hasattr(provider, "are_services_implemented"):
         return
-    ET.SubElement(provider_elem, "services_implemented").text = str(provider.are_services_implemented())
     services_status = provider.check_services()
+    services = provider.get_required_services()
+    implemented_count = sum(1 for service in services if provider.is_service_implemented(service)) if services else 0
+    total_count = len(services) if services else 0
+    ET.SubElement(provider_elem, "services_implemented").text = str(provider.are_services_implemented())
+    ET.SubElement(provider_elem, "services_implemented_count").text = f"{implemented_count}/{total_count}"
     services_implemented_elem = ET.SubElement(provider_elem, "services_implemented_list")
     for service in [service for service, implemented in services_status.items() if implemented]:
         ET.SubElement(services_implemented_elem, "service").text = service
@@ -759,6 +793,9 @@ def try_providers(  # noqa: C901
     results: dict[str, Any] = {}
     providers_without_method: list[str] = []
     for provider_name, provider in providers.items():
+        if hasattr(provider, "provider_can_be_used") and provider.provider_can_be_used is False:
+            continue
+        
         errors: list[str] = []
         
         if not provider.are_packages_installed():
@@ -776,7 +813,13 @@ def try_providers(  # noqa: C901
                 errors.append("config_missing")
         
         if not provider.is_service_implemented(command):
-            errors.append(f"Service missing: {command}")
+            services = provider.get_required_services()
+            if services:
+                implemented_count = sum(1 for service in services if provider.is_service_implemented(service))
+                total_count = len(services)
+                errors.append(f"Service missing: {command} ({implemented_count}/{total_count} services implemented)")
+            else:
+                errors.append(f"Service missing: {command}")
         
         if errors:
             results[provider_name] = {"errors": errors, "provider": provider.display_name}
@@ -854,6 +897,9 @@ def try_providers_first(  # noqa: C901
     results: dict[str, Any] = {}
     providers_without_method: list[str] = []
     for provider_name, provider in providers.items():
+        if hasattr(provider, "provider_can_be_used") and provider.provider_can_be_used is False:
+            continue
+        
         errors: list[str] = []
         
         if not provider.are_packages_installed():
@@ -871,9 +917,15 @@ def try_providers_first(  # noqa: C901
                 errors.append("config_missing")
         
         if not provider.are_services_implemented():
-            missing_services = provider.get_missing_services()
-            if missing_services:
-                errors.append(f"Service missing: {', '.join(missing_services)}")
+            services = provider.get_required_services()
+            if services:
+                implemented_count = sum(1 for service in services if provider.is_service_implemented(service))
+                total_count = len(services)
+                missing_services = provider.get_missing_services()
+                if missing_services:
+                    errors.append(f"Services missing: {', '.join(missing_services)} ({implemented_count}/{total_count} services implemented)")
+                else:
+                    errors.append(f"Services missing ({implemented_count}/{total_count} services implemented)")
             else:
                 errors.append("service_missing")
         

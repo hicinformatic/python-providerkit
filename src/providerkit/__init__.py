@@ -14,12 +14,14 @@ from .helpers import (
 )
 from .kit import ProviderBase
 from .kit.config import ConfigMixin
+from .kit.cost import CostMixin
 from .kit.package import PackageMixin
 from .kit.urls import UrlsMixin
 
 __all__ = [
     "ProviderBase",
     "ConfigMixin",
+    "CostMixin",
     "PackageMixin",
     "UrlsMixin",
     "get_providers",
