@@ -716,7 +716,6 @@ def get_providers(
 
 def try_providers(  # noqa: C901
     command: str,
-    *args: Any,  # noqa: ARG001
     providers: dict[str, ProviderBase] | None = None,
     json: str | Path | None = None,
     lib_name: str = "providerkit",
@@ -776,12 +775,8 @@ def try_providers(  # noqa: C901
             else:
                 errors.append("config_missing")
         
-        if not provider.are_services_implemented():
-            missing_services = provider.get_missing_services()
-            if missing_services:
-                errors.append(f"Service missing: {', '.join(missing_services)}")
-            else:
-                errors.append("service_missing")
+        if not provider.is_service_implemented(command):
+            errors.append(f"Service missing: {command}")
         
         if errors:
             results[provider_name] = {"errors": errors, "provider": provider.display_name}
@@ -815,7 +810,6 @@ def try_providers(  # noqa: C901
 
 def try_providers_first(  # noqa: C901
     command: str,
-    *args: Any,  # noqa: ARG001
     providers: dict[str, ProviderBase] | None = None,
     json: str | Path | None = None,
     lib_name: str = "providerkit",
