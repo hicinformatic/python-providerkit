@@ -940,6 +940,19 @@ def try_providers_first(  # noqa: C901
                 providers_without_method.append(provider_name)
                 continue
             result = method(**kwargs.get("additional_args", {}))
+            
+            # Check if result is empty/None - if so, continue to next provider
+            is_empty = (
+                result is None
+                or (isinstance(result, list) and len(result) == 0)
+                or (isinstance(result, dict) and len(result) == 0)
+                or (isinstance(result, str) and result.strip() == "")
+            )
+            
+            if is_empty:
+                results[provider_name] = {"result": result, "provider": provider.display_name, "empty": True}
+                continue
+            
             result_data = {"result": result, "provider": provider.display_name}
             results[provider_name] = result_data
 
