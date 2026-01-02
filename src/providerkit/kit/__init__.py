@@ -21,6 +21,7 @@ class ProviderBase(PackageMixin, UrlsMixin, ConfigMixin, ServiceMixin, CostMixin
     mandatory_base_fields: list[str] = ["name", "display_name"]
     path: str | None = None
     provider_can_be_used: bool = True
+    priority: int = 0 # 0 - highest, 5 - lowest
 
     def __init_subclass__(cls, **kwargs):
         """Automatically import required packages when subclass is defined."""

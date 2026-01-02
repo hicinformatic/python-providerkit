@@ -697,6 +697,46 @@ def _filter_providers_by_attributes(
     return filtered
 
 
+def _sort_providers(
+    providers: dict[str, ProviderBase],
+    order_by: list[str],
+) -> dict[str, ProviderBase]:
+    """Sort providers by specified attributes.
+    
+    Args:
+        providers: Dictionary of providers to sort.
+        order_by: List of attribute names to sort by (in order of priority).
+                  Attributes are accessed via getattr() with None as default if missing.
+                  Callable attributes are called to get their value.
+    
+    Returns:
+        Sorted dictionary of providers (OrderedDict-like behavior, but returns regular dict).
+    """
+    if not order_by or not providers:
+        return providers
+    
+    def get_sort_key(item: tuple[str, ProviderBase]) -> tuple[Any, ...]:
+        """Get sort key for a provider based on order_by attributes."""
+        _, provider = item
+        key_parts = []
+        for attr_name in order_by:
+            attr_value = getattr(provider, attr_name, None)
+            if callable(attr_value):
+                try:
+                    attr_value = attr_value()
+                except Exception:
+                    attr_value = None
+            # Handle None values - put them at the end
+            if attr_value is None:
+                key_parts.append((1, None))
+            else:
+                key_parts.append((0, attr_value))
+        return tuple(key_parts)
+    
+    sorted_items = sorted(providers.items(), key=get_sort_key)
+    return dict(sorted_items)
+
+
 def get_providers(
     *,
     json: str | Path | None = None,
@@ -707,6 +747,7 @@ def get_providers(
     query_string: str | None = None,
     search_fields: list[str] | None = None,
     attribute_search: dict[str, str] | None = None,
+    order_by: list[str] | None = None,
     format: str | None = None,
     **kwargs: Any,
 ) -> dict[str, ProviderBase] | str:
@@ -714,7 +755,14 @@ def get_providers(
 
     Priority: json > config > dir_path > package providers directory.
     If format is provided, returns formatted string instead of dict.
+    
+    Args:
+        order_by: List of attribute names to sort providers by (e.g., ["priority", "name"]).
+                  Attributes are accessed via getattr() with None as default if missing.
+                  Defaults to ["name", "priority"] if None.
     """
+    if order_by is None:
+        order_by = ["name", "priority"]
     additional_args = kwargs.get("additional_args", {})
 
     if config is not None:
@@ -743,6 +791,8 @@ def get_providers(
     if attribute_search:
         providers = _filter_providers_by_attributes(providers, attribute_search)
 
+    providers = _sort_providers(providers, order_by)
+
     if format:
         return format_providers(providers, format)
 
@@ -760,6 +810,7 @@ def try_providers(  # noqa: C901
     query_string: str | None = None,
     search_fields: list[str] | None = None,
     attribute_search: dict[str, str] | None = None,
+    order_by: list[str] | None = None,
     format: str | None = None,
     **kwargs: Any,
 ) -> dict[str, Any] | str:
@@ -782,6 +833,7 @@ def try_providers(  # noqa: C901
             query_string=query_string,
             search_fields=search_fields,
             attribute_search=attribute_search,
+            order_by=order_by,
         )
 
         if isinstance(providers_result, str):
@@ -863,6 +915,7 @@ def try_providers_first(  # noqa: C901
     query_string: str | None = None,
     search_fields: list[str] | None = None,
     attribute_search: dict[str, str] | None = None,
+    order_by: list[str] | None = None,
     format: str | None = None,
     **kwargs: Any,
 ) -> Any:
@@ -886,6 +939,7 @@ def try_providers_first(  # noqa: C901
             query_string=query_string,
             search_fields=search_fields,
             attribute_search=attribute_search,
+            order_by=order_by,
         )
 
         if isinstance(providers_result, str):
