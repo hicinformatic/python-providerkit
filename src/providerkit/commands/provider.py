@@ -6,7 +6,7 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 from qualitybase.commands.base import Command
-from qualitybase.cli import _get_package_name  # noqa: TID252
+from qualitybase.cli import _get_package_name as _get_package_name_from_context  # noqa: TID252
 
 from ..helpers import get_providers, try_providers, try_providers_first  # noqa: TID252
 
@@ -98,7 +98,7 @@ def _provider_command(args: list[str]) -> bool:  # noqa: C901
             print(f"Unknown argument: {arg}", file=sys.stderr)
             return False
 
-    lib_name = _get_package_name()
+    lib_name = _get_package_name_from_context()
 
     providers_args: dict[str, Any] = {
         "format": output_format,
