@@ -10,7 +10,26 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-  {name = "Your Name", email = "your.email@example.com"}
+  {name = "Hicinformatic", email = "hicinformatic@gmail.com"}
+]
+keywords = [
+  "provider",
+  "service-provider",
+  "multi-provider",
+  "provider-management",
+  "python",
+  "abstraction",
+  "service-abstraction",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
   "qualitybase",
@@ -18,6 +37,12 @@ dependencies = [
 
 [project.scripts]
 providerkit = "providerkit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hicinformatic/python-providerkit"
+Repository = "https://github.com/hicinformatic/python-providerkit"
+Documentation = "https://github.com/hicinformatic/python-providerkit#readme"
+Issues = "https://github.com/hicinformatic/python-providerkit/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -37,6 +62,9 @@ security = [
 test = [
   "qualitybase[test]",
 ]
+
+[tool.setuptools]
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
