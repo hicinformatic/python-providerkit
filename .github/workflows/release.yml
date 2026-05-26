@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.package_name }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package_name: providerkit
+            working_directory: python-providerkit
+            packages_dir: python-providerkit/dist/
+            install_dependencies: |
+              python -m pip install "clicommands @ git+https://github.com/SunnyBara/python-clicommands.git@3d8b78ba62d1ff3fff0803060a467d8f44cbc86a"
+          - package_name: django-providerkit
+            working_directory: django-providerkit
+            packages_dir: django-providerkit/dist/
+            install_dependencies: |
+              python -m pip install "Django==5.2.*"
+              python -m pip install "clicommands @ git+https://github.com/SunnyBara/python-clicommands.git@3d8b78ba62d1ff3fff0803060a467d8f44cbc86a"
+              python -m pip install -e ../python-providerkit
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build distributions
+        working-directory: ${{ matrix.working_directory }}
+        run: |
+          python -m pip install --upgrade pip
+          ${{ matrix.install_dependencies }}
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+
+      - name: Publish to TestPyPI
+        if: contains(github.ref_name, 'rc')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: ${{ matrix.packages_dir }}
+
+      - name: Publish to PyPI
+        if: ${{ !contains(github.ref_name, 'rc') }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ matrix.packages_dir }}
