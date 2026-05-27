@@ -8,87 +8,91 @@ on:
   workflow_dispatch:
 
 jobs:
-  python-tests:
-    name: Python providerkit tests
+  tests:
+    name: ${{ matrix.package_name }} tests py${{ matrix.python_version }} ${{ matrix.django_version }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-
-    defaults:
-      run:
-        working-directory: python-providerkit
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install "clicommands @ git+https://github.com/SunnyBara/python-clicommands.git@3d8b78ba62d1ff3fff0803060a467d8f44cbc86a"
-          python -m pip install -e ".[test]"
-
-      - name: Run tests
-        run: python -m pytest
-
-  django-tests:
-    name: Django providerkit tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-        django-version: ["5.0.*", "5.1.*", "5.2.*"]
-
-    defaults:
-      run:
-        working-directory: django-providerkit
+        package_name: ["providerkit", "django-providerkit"]
+        python_version: ["3.10", "3.11", "3.12"]
+        django_version: ["", "5.0.*", "5.1.*", "5.2.*"]
+        exclude:
+          - package_name: providerkit
+            django_version: "5.0.*"
+          - package_name: providerkit
+            django_version: "5.1.*"
+          - package_name: providerkit
+            django_version: "5.2.*"
+          - package_name: django-providerkit
+            django_version: ""
+        include:
+          - package_name: providerkit
+            working_directory: python-providerkit
+            install_dependencies: |
+              python -m pip install "clicommands>=0.1.1"
+              python -m pip install -e ".[test]"
+            test_command: python -m pytest
+          - package_name: django-providerkit
+            working_directory: django-providerkit
+            install_dependencies: |
+              python -m pip install build
+              python -m pip install "clicommands>=0.1.1"
+              python -m pip install -e ../python-providerkit
+              python -m pip install -e ".[test]"
+            test_command: python manage.py test
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python_version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python_version }}
 
       - name: Install dependencies
+        working-directory: ${{ matrix.working_directory }}
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build
-          python -m pip install "Django==${{ matrix.django-version }}"
-          python -m pip install "clicommands @ git+https://github.com/SunnyBara/python-clicommands.git@3d8b78ba62d1ff3fff0803060a467d8f44cbc86a"
-          python -m pip install -e ../python-providerkit
-          python -m pip install -e ".[test]"
+          ${{ matrix.install_dependencies }}
+
+      - name: Install Django
+        if: ${{ matrix.package_name == 'django-providerkit' }}
+        working-directory: ${{ matrix.working_directory }}
+        run: python -m pip install "Django==${{ matrix.django_version }}"
 
       - name: Django system check
+        if: ${{ matrix.package_name == 'django-providerkit' }}
+        working-directory: ${{ matrix.working_directory }}
         run: python manage.py check
 
-      - name: Run Django tests
-        run: python manage.py test
+      - name: Run tests
+        working-directory: ${{ matrix.working_directory }}
+        run: ${{ matrix.test_command }}
 
-  python-build:
-    name: Python providerkit build
-    needs: python-tests
+  build:
+    name: Build ${{ matrix.package_name }}
+    needs: tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
-    defaults:
-      run:
-        working-directory: python-providerkit
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package_name: providerkit
+            working_directory: python-providerkit
+            install_dependencies: |
+              python -m pip install "clicommands>=0.1.1"
+          - package_name: django-providerkit
+            working_directory: django-providerkit
+            install_dependencies: |
+              python -m pip install "Django==5.2.*"
+              python -m pip install "clicommands>=0.1.1"
+              python -m pip install -e ../python-providerkit
 
     steps:
       - name: Checkout repository
@@ -100,39 +104,10 @@ jobs:
           python-version: "3.12"
 
       - name: Build distributions
+        working-directory: ${{ matrix.working_directory }}
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "clicommands @ git+https://github.com/SunnyBara/python-clicommands.git@3d8b78ba62d1ff3fff0803060a467d8f44cbc86a"
-          python -m pip install build twine
-          python -m build
-          python -m twine check dist/*
-
-  django-build:
-    name: Django providerkit build
-    needs: django-tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    defaults:
-      run:
-        working-directory: django-providerkit
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Build distributions
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install "Django==5.2.*"
-          python -m pip install "clicommands @ git+https://github.com/SunnyBara/python-clicommands.git@3d8b78ba62d1ff3fff0803060a467d8f44cbc86a"
-          python -m pip install -e ../python-providerkit
+          ${{ matrix.install_dependencies }}
           python -m pip install build twine
           python -m build
           python -m twine check dist/*
