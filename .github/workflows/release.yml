@@ -21,15 +21,9 @@ jobs:
           - package_name: providerkit
             working_directory: python-providerkit
             packages_dir: python-providerkit/dist/
-            install_dependencies: |
-              python -m pip install "clicommands>=0.1.1"
           - package_name: django-providerkit
             working_directory: django-providerkit
             packages_dir: django-providerkit/dist/
-            install_dependencies: |
-              python -m pip install "Django==5.2.*"
-              python -m pip install "clicommands>=0.1.1"
-              python -m pip install -e ../python-providerkit
 
     steps:
       - name: Checkout repository
@@ -44,7 +38,10 @@ jobs:
         working-directory: ${{ matrix.working_directory }}
         run: |
           python -m pip install --upgrade pip
-          ${{ matrix.install_dependencies }}
+          if [ "${{ matrix.package_name }}" = "django-providerkit" ]; then
+            python -m pip install "Django==5.2.*"
+            python -m pip install -e ../python-providerkit
+          fi
           python -m pip install build twine
           python -m build
           python -m twine check dist/*
