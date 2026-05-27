@@ -4,11 +4,12 @@ from providerkit.providers.base import ProviderListBase
 from virtualqueryset.models import VirtualModel
 
 from providerkit import PROVIDERKIT_FIELDS_SERVICES
-from django_providerkit import fields_associations
 from django_providerkit.managers import ProviderServiceManager
 
 import json
 from django.utils.safestring import mark_safe
+
+from .define import build_model_field
 
 services = list(ProviderListBase.services_cfg.keys())
 
@@ -40,9 +41,7 @@ class ProviderServiceModelBase(VirtualModel):
 
 for name, cfg in PROVIDERKIT_FIELDS_SERVICES.items():
     if name != 'name':
-        db_field = fields_associations[cfg['format']](
-            verbose_name=_(cfg['label']), help_text=_(cfg['description'])
-        )
+        db_field = build_model_field(cfg)
         ProviderServiceModelBase.add_to_class(name, db_field)
 
 

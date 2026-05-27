@@ -26,6 +26,34 @@ class ServiceProviderModel(models.Model):
         abstract = True
 
 
+def build_model_field(cfg: dict, *, primary_key: bool = False):
+    """Build a Django model field from ProviderKit field metadata."""
+    field_format = cfg["format"]
+    field_cls = fields_associations[field_format]
+    kwargs = {
+        "verbose_name": _(cfg["label"]),
+        "help_text": _(cfg["description"]),
+    }
+
+    if primary_key:
+        kwargs["primary_key"] = True
+
+    if field_format == "str":
+        kwargs["max_length"] = 255
+        if not primary_key:
+            kwargs["blank"] = True
+            kwargs["default"] = ""
+    elif field_format == "text":
+        if not primary_key:
+            kwargs["blank"] = True
+            kwargs["default"] = ""
+    elif field_format == "float":
+        kwargs["null"] = True
+        kwargs["blank"] = True
+
+    return field_cls(**kwargs)
+
+
 def create_service_provider_model(name, fields, app_label, field_id):
     """Create a service provider model."""
     attrs = {
@@ -34,11 +62,7 @@ def create_service_provider_model(name, fields, app_label, field_id):
     }
 
     fields_to_add = {
-        field: fields_associations[cfg['format']](
-            verbose_name=_(cfg['label']),
-            help_text=_(cfg['description']),
-            primary_key=field == field_id,
-        )
+        field: build_model_field(cfg, primary_key=field == field_id)
         for field, cfg in fields.items()
     }
 
@@ -54,9 +78,7 @@ def define_provider_fields(primary_key="id", add_fields=None):
         for field, value in FIELDS_PROVIDERKIT.items():
             if field == primary_key:
                 continue
-            db_field = fields_associations[value['format']](
-                verbose_name=_(value['label']), help_text=_(value['description'])
-            )
+            db_field = build_model_field(value)
             cls.add_to_class(field, db_field)
 
         @property
@@ -80,9 +102,7 @@ def define_provider_fields(primary_key="id", add_fields=None):
 
         if add_fields:
             for field, value in add_fields.items():
-                db_field = fields_associations[value['format']](
-                    verbose_name=_(value['label']), help_text=_(value['description'])
-                )
+                db_field = build_model_field(value)
                 cls.add_to_class(field, db_field)
 
         return cls
@@ -146,22 +166,7 @@ def define_fields_from_config(fields_config: dict, primary_key: str | None = Non
             if field == primary_key:
                 continue
 
-            db_field = fields_associations[value['format']](
-                verbose_name=_(value['label']), help_text=_(value['description'])
-            )
-
-            if value['format'] in ('str', 'text'):
-                db_field.blank = True
-                if value['format'] == 'text':
-                    db_field.max_length = None
-                elif 'reference' in field or 'id' in field:
-                    db_field.max_length = 255
-                else:
-                    db_field.max_length = 500
-            elif value['format'] == 'float':
-                db_field.null = True
-                db_field.blank = True
-
+            db_field = build_model_field(value)
             cls.add_to_class(field, db_field)
 
         return cls
